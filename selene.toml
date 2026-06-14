@@ -1,0 +1,24 @@
+std = "roblox"
+
+[lints]
+# Error-level lints
+undefined_variable = "error"
+eof_whitespace = "error"
+mixed_equal_operators = "error"
+mismatched_arg_count = "error"
+multiple_statements = "error"
+trailing_whitespace = "error"
+
+# Warning-level lints (code quality)
+empty_if = "warn"
+if_same_then_else = "warn"
+shadowing = "warn"
+unbalanced_assignments = "warn"
+unscoped_variables = "warn"
+unused_variable = "warn"
+duplicate_keys = "warn"
+local_used_as_loop_index = "warn"
+
+# Disabled lints
+must_use = "allow"
+standard_library = "allow"

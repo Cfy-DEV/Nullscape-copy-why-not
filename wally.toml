@@ -1,0 +1,13 @@
+[package]
+name = "cf-dev/domaingame"
+version = "0.1.0"
+registry = "https://github.com/UpliftGames/wally-index"
+realm = "shared"
+
+[dependencies]
+Observers = "sleitnick/observers@^0.4.0"
+Signal = "sleitnick/signal@2.0.3"
+Trove = "sleitnick/trove@1.8.0"
+Net = "sleitnick/net@0.2.0"
+topbarplus = "1foreverhd/topbarplus@3.4.0"
+octo-tree = "sleitnick/octo-tree@0.3.1"
