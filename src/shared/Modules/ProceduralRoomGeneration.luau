@@ -1,11 +1,48 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
+local Chunk = require(ReplicatedStorage.Shared.Classes.Chunk)
 local NetModule = require(script.Parent.NetModule)
 local roomsFolder = ServerStorage.Rooms
 
 local module = {}
 
+module.Chunk = Chunk.new(Vector3.new(25, 25, 25))
 module.Cache = NetModule.New("Cache", "Folder", workspace, nil)
+
+local MAX_RETRIES = 3
+
+local function RetryRoom(room)
+	local retries = room:GetAttribute("Retries") or 0
+
+	if retries < MAX_RETRIES then
+		room:SetAttribute("Retries", retries + 1)
+
+		local ends = module.GetEnds(room)
+
+		for _, endPart in pairs(ends) do
+			task.spawn(function()
+				module.NextRoom(endPart)
+			end)
+		end
+
+		return
+	end
+
+	local previousTag = room:FindFirstChild("__Previous")
+
+	if previousTag and previousTag.Value then
+		local previousEnd = previousTag.Value
+
+		module.DestroyBranch(room)
+		room:Destroy()
+
+		task.spawn(function()
+			if previousEnd and previousEnd.Parent then
+				module.NextRoom(previousEnd)
+			end
+		end)
+	end
+end
 
 module.DestroyBranch = function(room: Model, visited)
 	task.wait()
@@ -71,34 +108,25 @@ module.NextRoom = function(PreviousEnd, Door)
 
 			clone:SetPrimaryPartCFrame(PreviousEnd.CFrame * CFrame.Angles(0, math.rad(180), 0))
 
-			local parameters = OverlapParams.new()
-			parameters.FilterType = Enum.RaycastFilterType.Exclude
-			parameters.FilterDescendantsInstances = {
-				clone,
-				previousRoom,
-			}
-
-			local cframe, size = clone:GetBoundingBox()
-
-			local partsIn = workspace:GetPartBoundsInBox(cframe, size * 0.9, parameters)
-
 			local blocked = false
 
-			for _, part in ipairs(partsIn) do
-				if part.Name == "Barrier" then
-					blocked = true
-					break
-				end
-
-				if part.CanCollide and not part:IsDescendantOf(clone) then
-					blocked = true
-					break
+			for _, cloneInstance in pairs(clone:GetChildren()) do
+				if cloneInstance.Name == "Chunk" then
+					if module.Chunk:GetChunkAtPosition(cloneInstance.Position) then
+						blocked = true
+					end
 				end
 			end
 
 			if blocked then
 				clone:Destroy()
 				continue
+			end
+
+			for _, cloneInstance in pairs(clone:GetChildren()) do
+				if cloneInstance.Name == "Chunk" then
+					module.Chunk:AddNode(cloneInstance)
+				end
 			end
 
 			local currentTag = Instance.new("ObjectValue")
@@ -111,27 +139,12 @@ module.NextRoom = function(PreviousEnd, Door)
 			previousTag.Parent = clone
 			previousTag.Value = PreviousEnd
 
+			clone:SetAttribute("Retries", 0)
+
 			return clone
 		end
 
-		--[[
-
-		local findPreviousTag = previousRoom:FindFirstChild("__Previous")
-
-		if findPreviousTag and findPreviousTag.Value then
-			local previousEnd = findPreviousTag.Value
-		
-			module.DestroyBranch(previousRoom)
-			previousRoom:Destroy()
-
-			task.spawn(function()
-				if previousEnd and previousEnd.Parent then
-					module.NextRoom(previousEnd)
-				end
-			end)
-		end
-	
-		]]
+		RetryRoom(previousRoom)
 	end
 
 	local rayOrigin = PreviousEnd.Position
@@ -141,8 +154,6 @@ module.NextRoom = function(PreviousEnd, Door)
 	raycastParams.FilterDescendantsInstances = {
 		previousRoom,
 	}
-
-	-- Rojo connected
 
 	local raycastResult = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
 
@@ -196,7 +207,7 @@ module.NewBranch = function(StartingEnd, MaxDepth)
 		ends = table.clone(temp)
 		table.clear(temp)
 	end
-	
+
 	return branch
 end
 

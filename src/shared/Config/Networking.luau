@@ -2,6 +2,15 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Signal = require(ReplicatedStorage.Packages.Signal)
 local NetModule = require(ReplicatedStorage.Shared.Modules.NetModule)
 local values = {
+    ScriptJunk =
+    
+    NetModule.New(
+    "ScriptJunk",
+    "Folder",
+    workspace,
+    nil
+    ),
+
     SharedRoundTimeValue =
 
     NetModule.New(

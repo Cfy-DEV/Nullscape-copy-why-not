@@ -1,34 +1,79 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TextBoxService = game:GetService("TextBoxService")
+local Networking = require(ReplicatedStorage.Shared.Config.Networking)
+local Types = require(ReplicatedStorage.Shared.Config.Types)
 local module = {}
 
 local chunk = {}
 chunk.__index = chunk
 
-function module.new(Size: Vector3)
+function module.new(Size: Vector3): Types.Chunk
 	local self = setmetatable({}, chunk)
 
+	self.WorldCenter = Vector3.zero
 	self.Size = Size
 	self.Chunks = {}
 
 	return self
 end
 
-local function gridNum(a, b)
-	assert(b ~= 0, "B cannot be 0")
-	return math.round(a / b) * b
-end
+local function roundPos(pos: Vector3, size: Vector3, center: Vector3)
+	assert(typeof(pos) == "Vector3")
+	assert(typeof(size) == "Vector3")
+	assert(typeof(center) == "Vector3")
 
-local function roundPos(pos: Vector3, size: Vector3)
-	assert(typeof(pos) == "Vector3", "Wrong parameter type given")
-	assert(typeof(size) == "Vector3", "Wrong parameter type given")
-	local x = (size.X == math.huge) and 0 or gridNum(pos.X, size.X)
-	local y = (size.Y == math.huge) and 0 or gridNum(pos.Y, size.Y)
-	local z = (size.Z == math.huge) and 0 or gridNum(pos.Z, size.Z)
+	local relative = pos - center
+
+	local x = not (size.X == 0)
+		and ((size.X == math.huge) and center.X or math.round(relative.X / size.X) * size.X + center.X)
+
+	local y = not (size.Y == 0)
+		and ((size.Y == math.huge) and center.Y or math.round(relative.Y / size.Y) * size.Y + center.Y)
+
+	local z = not (size.Z == 0)
+		and ((size.Z == math.huge) and center.Z or math.round(relative.Z / size.Z) * size.Z + center.Z)
+
 	return Vector3.new(x, y, z)
 end
 
 local function crypt(pos: Vector3)
 	assert(typeof(pos) == "Vector3", "Wrong parameter type given")
 	return ("%sx%sx%s"):format(tostring(math.floor(pos.X)), tostring(math.floor(pos.Y)), tostring(math.floor(pos.Z)))
+end
+
+local function decrypt(key: string)
+	local splitNums = string.split(key, "x")
+	assert(#splitNums == 3, ("%s is not a encrypted message."):format(key))
+	local result = Vector3.new(tonumber(splitNums[1]), tonumber(splitNums[2]), tonumber(splitNums[3]))
+	return result
+end
+
+--[[
+Destroy every single chunk and rebuild it.
+]]
+function chunk:RebuildChunks()
+	local oldChunks = self.Chunks
+	self.Chunks = {}
+
+	for _, partList in pairs(oldChunks) do
+		for _, part in ipairs(partList) do
+			self:AddNode(part)
+		end
+	end
+end
+
+--[[
+Sets the world center to the given position.
+]]
+function chunk:SetWorldCenter(center: Vector3)
+	assert(typeof(center) == "Vector3")
+
+	if center == self.WorldCenter then
+		return
+	end
+
+	self.WorldCenter = center
+	self:RebuildChunks()
 end
 
 --[[
@@ -40,11 +85,11 @@ function chunk:GetChunksInRadius(centerPos: Vector3, radius: number)
 	local chunks = {}
 	local existingChunks = self.Chunks
 
-	local pos = roundPos(centerPos, self.Size)
+	local pos = roundPos(centerPos, self.Size, self.WorldCenter)
 
-	local radiusX = math.ceil(radius / self.Size.X) * radius
-	local radiusY = math.ceil(radius / self.Size.Y) * radius
-	local radiusZ = math.ceil(radius / self.Size.Z) * radius
+	local radiusX = math.ceil(radius / self.Size.X) * self.Size.X
+	local radiusY = math.ceil(radius / self.Size.Y) * self.Size.Y
+	local radiusZ = math.ceil(radius / self.Size.Z) * self.Size.Z
 
 	-- 🦅 FUCK READIBILITY 🦅
 
@@ -70,13 +115,16 @@ function chunk:GetChunksInRadius(centerPos: Vector3, radius: number)
 end
 
 --[[
-Adds a node (Instance) to the appropriate chunk based on position
+Adds a node (Instance) to the appropriate chunk based on 
+vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+Please notice that it DOES NOT support moving parts!!!
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ]]
 function chunk:AddNode(node: Instance)
 	assert(typeof(node) == "Instance", "Wrong parameter type given")
-    assert(node:IsA("BasePart"), "Node must be a part base")
+	assert(node:IsA("BasePart"), "Node must be a part base")
 	local pos = node.Position
-	local chunkPos = roundPos(pos, self.Size)
+	local chunkPos = roundPos(pos, self.Size, self.WorldCenter)
 	local chunkKey = crypt(chunkPos)
 
 	if not self.Chunks[chunkKey] then
@@ -84,6 +132,17 @@ function chunk:AddNode(node: Instance)
 	end
 
 	table.insert(self.Chunks[chunkKey], node)
+
+	local part = Instance.new("Part")
+	part.Shape = Enum.PartType.Block
+	part.Material = Enum.Material.Neon
+	part.Color = Color3.fromRGB(0, 255, 0)
+	part.Transparency = 0.5
+	part.CanCollide = false
+	part.Anchored = true
+	part.CanTouch = false
+	part.CanQuery = false
+	part.Parent = Networking.ScriptJunk
 end
 
 --[[
@@ -122,7 +181,7 @@ Returns the chunk data at the given position, or nil if not found
 ]]
 function chunk:GetChunkAtPosition(pos: Vector3)
 	assert(typeof(pos) == "Vector3", "Wrong parameter type given")
-	local chunkPos = roundPos(pos, self.Size)
+	local chunkPos = roundPos(pos, self.Size, self.WorldCenter)
 	local chunkKey = crypt(chunkPos)
 	return self.Chunks[chunkKey]
 end
@@ -157,7 +216,7 @@ function chunk:RemoveNode(node: Instance)
 	assert(typeof(node) == "Instance", "Wrong parameter type given")
 	assert(node:IsA("BasePart"), "Parameter must be a part base")
 	local pos = node.Position
-	local chunkPos = roundPos(pos, self.Size)
+	local chunkPos = roundPos(pos, self.Size, self.WorldCenter)
 	local chunkKey = crypt(chunkPos)
 	local chunkData = self.Chunks[chunkKey]
 
@@ -165,6 +224,9 @@ function chunk:RemoveNode(node: Instance)
 		local index = table.find(chunkData, node)
 		if index then
 			table.remove(chunkData, index)
+		end
+		if #chunkData == 0 then
+			self.Chunks[chunkKey] = nil
 		end
 	end
 end

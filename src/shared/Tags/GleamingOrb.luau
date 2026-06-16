@@ -33,7 +33,6 @@ if RunService:IsServer() then
 			local nearby = serverOrbTree:SearchRadius(root.Position, 5)
 
 			for _, node in ipairs(nearby) do
-				print("Nearby!")
 				local orb = node.Object
 
 				orb:Destroy()
