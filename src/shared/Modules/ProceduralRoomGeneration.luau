@@ -9,11 +9,24 @@ local module = {}
 module.Chunk = Chunk.new(Vector3.new(25, 25, 25))
 module.Cache = NetModule.New("Cache", "Folder", workspace, nil)
 
+module.RoomNodes = {}
+
 if workspace:FindFirstChild("WorldCenter") then
 	module.Chunk:SetWorldCenter(workspace.WorldCenter.Position)
 end
 
 local MAX_RETRIES = 3
+
+module.CleanupRoomChunks = function(room: Model)
+	local nodes = module.RoomNodes[room]
+	if not nodes then return end
+
+	for _, node in ipairs(nodes) do
+		module.Chunk:RemoveNode(node)
+	end
+
+	module.RoomNodes[room] = nil
+end
 
 local function RetryRoom(room)
 	local retries = room:GetAttribute("Retries") or 0
@@ -38,6 +51,7 @@ local function RetryRoom(room)
 		local previousEnd = previousTag.Value
 
 		module.DestroyBranch(room)
+		module.CleanupRoomChunks(room)
 		room:Destroy()
 
 		task.spawn(function()
@@ -65,6 +79,7 @@ module.DestroyBranch = function(room: Model, visited)
 
 			if nextRoom and nextRoom.Parent == module.Cache then
 				module.DestroyBranch(nextRoom, visited)
+				module.CleanupRoomChunks(nextRoom)
 				nextRoom:Destroy()
 			end
 		end
@@ -118,7 +133,6 @@ module.NextRoom = function(PreviousEnd, Door)
 				if cloneInstance.Name == "Chunk" then
 					local _, exist = module.Chunk:GetChunkAtPosition(cloneInstance.Position)
 					if exist then
-						print("E")
 						blocked = true
 					end
 				end
@@ -129,9 +143,12 @@ module.NextRoom = function(PreviousEnd, Door)
 				continue
 			end
 
+			module.RoomNodes[clone] = {}
+
 			for _, cloneInstance in pairs(clone:GetChildren()) do
 				if cloneInstance.Name == "Chunk" then
 					module.Chunk:AddNode(cloneInstance)
+					table.insert(module.RoomNodes[clone], cloneInstance)
 				end
 			end
 
@@ -149,8 +166,6 @@ module.NextRoom = function(PreviousEnd, Door)
 
 			return clone
 		end
-
-		--RetryRoom(previousRoom)
 	end
 
 	local rayOrigin = PreviousEnd.Position
