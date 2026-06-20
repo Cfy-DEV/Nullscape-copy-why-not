@@ -1,5 +1,4 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TextBoxService = game:GetService("TextBoxService")
 local Networking = require(ReplicatedStorage.Shared.Config.Networking)
 local Types = require(ReplicatedStorage.Shared.Config.Types)
 local module = {}
@@ -41,7 +40,7 @@ local function crypt(pos: Vector3)
 	return ("%sx%sx%s"):format(tostring(math.floor(pos.X)), tostring(math.floor(pos.Y)), tostring(math.floor(pos.Z)))
 end
 
-local function decrypt(key: string)
+function module.decrypt(key: string)
 	local splitNums = string.split(key, "x")
 	assert(#splitNums == 3, ("%s is not a encrypted message."):format(key))
 	local result = Vector3.new(tonumber(splitNums[1]), tonumber(splitNums[2]), tonumber(splitNums[3]))
@@ -60,6 +59,8 @@ function chunk:RebuildChunks()
 			self:AddNode(part)
 		end
 	end
+
+	return self.Chunks
 end
 
 --[[
@@ -129,20 +130,22 @@ function chunk:AddNode(node: Instance)
 
 	if not self.Chunks[chunkKey] then
 		self.Chunks[chunkKey] = {}
+		
+		local part = Instance.new("Part")
+		part.Shape = Enum.PartType.Block
+		part.Material = Enum.Material.Neon
+		part.Color = Color3.fromRGB(0, 255, 0)
+		part.Transparency = 0.5
+		part.CanCollide = false
+		part.Anchored = true
+		part.CanTouch = false
+		part.CanQuery = false
+		part.Parent = Networking.ScriptJunk
 	end
 
 	table.insert(self.Chunks[chunkKey], node)
 
-	local part = Instance.new("Part")
-	part.Shape = Enum.PartType.Block
-	part.Material = Enum.Material.Neon
-	part.Color = Color3.fromRGB(0, 255, 0)
-	part.Transparency = 0.5
-	part.CanCollide = false
-	part.Anchored = true
-	part.CanTouch = false
-	part.CanQuery = false
-	part.Parent = Networking.ScriptJunk
+	return chunkKey
 end
 
 --[[
@@ -183,15 +186,14 @@ function chunk:GetChunkAtPosition(pos: Vector3)
 	assert(typeof(pos) == "Vector3", "Wrong parameter type given")
 	local chunkPos = roundPos(pos, self.Size, self.WorldCenter)
 	local chunkKey = crypt(chunkPos)
-	return self.Chunks[chunkKey]
+	return chunkKey
 end
 
 --[[
 Returns all parts in the chunk at the given position
 ]]
-function chunk:GetPartsInChunk(pos: Vector3)
-	assert(typeof(pos) == "Vector3", "Wrong parameter type given")
-	return self:GetChunkAtPosition(pos) or {}
+function chunk:GetPartsInChunk(key)
+	local chunks = self.Chunks
 end
 
 --[[
