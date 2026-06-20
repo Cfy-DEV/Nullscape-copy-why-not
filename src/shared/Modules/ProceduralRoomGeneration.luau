@@ -9,6 +9,10 @@ local module = {}
 module.Chunk = Chunk.new(Vector3.new(25, 25, 25))
 module.Cache = NetModule.New("Cache", "Folder", workspace, nil)
 
+if workspace:FindFirstChild("WorldCenter") then
+	module.Chunk:SetWorldCenter(workspace.WorldCenter.Position)
+end
+
 local MAX_RETRIES = 3
 
 local function RetryRoom(room)
@@ -112,7 +116,9 @@ module.NextRoom = function(PreviousEnd, Door)
 
 			for _, cloneInstance in pairs(clone:GetChildren()) do
 				if cloneInstance.Name == "Chunk" then
-					if module.Chunk:GetChunkAtPosition(cloneInstance.Position) then
+					local _, exist = module.Chunk:GetChunkAtPosition(cloneInstance.Position)
+					if exist then
+						print("E")
 						blocked = true
 					end
 				end
@@ -144,7 +150,7 @@ module.NextRoom = function(PreviousEnd, Door)
 			return clone
 		end
 
-		RetryRoom(previousRoom)
+		--RetryRoom(previousRoom)
 	end
 
 	local rayOrigin = PreviousEnd.Position

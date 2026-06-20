@@ -23,17 +23,30 @@ export type Timer =
 export type Chunk = {
 	WorldCenter: Vector3,
 	Size: Vector3,
-	Chunks: { [string]: { Instance } },
 
-	GetChunksInRadius: (self: Chunk, centerPos: Vector3, radius: number) -> { string },
-	AddNode: (self: Chunk, node: Instance) -> (),
-	GetPartsInRadius: (self: Chunk, pos: Vector3, radius: number) -> { Instance },
-	GetAllParts: (self: Chunk) -> { Instance },
-	GetChunkAtPosition: (self: Chunk, pos: Vector3) -> { Instance }?,
-	GetPartsInChunk: (self: Chunk, pos: Vector3) -> { Instance },
-	RemoveNode: (self: Chunk, node: Instance) -> (),
-	Destroy: (self: Chunk) -> (),
+	Chunks: {
+		[string]: {BasePart}
+	},
+
+	NodeToChunk: {
+		[BasePart]: string
+	},
+
+	NodeIndex: {
+		[BasePart]: number
+	},
+
+	RebuildChunks: (self: Chunk) -> {[string]: {BasePart}},
+	SetWorldCenter: (self: Chunk, center: Vector3) -> (),
+	GetChunksInRadius: (self: Chunk, centerPos: Vector3, radius: number) -> {string},
+	AddNode: (self: Chunk, node: BasePart) -> string,
+	GetPartsInRadius: (self: Chunk, pos: Vector3, radius: number) -> {BasePart},
+	GetAllParts: (self: Chunk) -> {BasePart},
+	GetChunkAtPosition: (self: Chunk, pos: Vector3) -> (string, boolean),
+	GetPartsInChunk: (self: Chunk, key: string) -> {BasePart}?,
+	RemoveNode: (self: Chunk, node: BasePart) -> (),
 	Cleanup: (self: Chunk) -> (),
+	Destroy: (self: Chunk) -> (),
 }
 
 return module

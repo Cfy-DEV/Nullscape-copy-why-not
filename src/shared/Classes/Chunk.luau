@@ -13,6 +13,9 @@ function module.new(Size: Vector3): Types.Chunk
 	self.Size = Size
 	self.Chunks = {}
 
+	self.NodeToChunk = {}
+	self.NodeIndex = {}
+
 	return self
 end
 
@@ -121,29 +124,33 @@ vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 Please notice that it DOES NOT support moving parts!!!
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ]]
-function chunk:AddNode(node: Instance)
-	assert(typeof(node) == "Instance", "Wrong parameter type given")
-	assert(node:IsA("BasePart"), "Node must be a part base")
+function chunk:AddNode(node: BasePart)
 	local pos = node.Position
 	local chunkPos = roundPos(pos, self.Size, self.WorldCenter)
 	local chunkKey = crypt(chunkPos)
 
 	if not self.Chunks[chunkKey] then
 		self.Chunks[chunkKey] = {}
-		
 		local part = Instance.new("Part")
 		part.Shape = Enum.PartType.Block
 		part.Material = Enum.Material.Neon
 		part.Color = Color3.fromRGB(0, 255, 0)
-		part.Transparency = 0.5
+		part.Transparency = 0.75
 		part.CanCollide = false
 		part.Anchored = true
 		part.CanTouch = false
 		part.CanQuery = false
 		part.Parent = Networking.ScriptJunk
+		part.Position = pos
+		part.Size = self.Size
 	end
 
-	table.insert(self.Chunks[chunkKey], node)
+	local chunkData = self.Chunks[chunkKey]
+
+	table.insert(chunkData, node)
+
+	self.NodeToChunk[node] = chunkKey
+	self.NodeIndex[node] = #chunkData
 
 	return chunkKey
 end
@@ -180,13 +187,14 @@ function chunk:GetAllParts()
 end
 
 --[[
-Returns the chunk data at the given position, or nil if not found
+Returns the chunk key of a certain position, and also return if it exists
 ]]
 function chunk:GetChunkAtPosition(pos: Vector3)
 	assert(typeof(pos) == "Vector3", "Wrong parameter type given")
 	local chunkPos = roundPos(pos, self.Size, self.WorldCenter)
 	local chunkKey = crypt(chunkPos)
-	return chunkKey
+	local find = self.Chunks[chunkKey]
+	return chunkKey, find ~= nil
 end
 
 --[[
@@ -194,6 +202,8 @@ Returns all parts in the chunk at the given position
 ]]
 function chunk:GetPartsInChunk(key)
 	local chunks = self.Chunks
+	local find = chunks[key]
+	return find
 end
 
 --[[
@@ -214,22 +224,35 @@ end
 --[[
 Removes a node (Instance) from the appropriate chunk based on position
 ]]
-function chunk:RemoveNode(node: Instance)
-	assert(typeof(node) == "Instance", "Wrong parameter type given")
-	assert(node:IsA("BasePart"), "Parameter must be a part base")
-	local pos = node.Position
-	local chunkPos = roundPos(pos, self.Size, self.WorldCenter)
-	local chunkKey = crypt(chunkPos)
+function chunk:RemoveNode(node: BasePart)
+	local chunkKey = self.NodeToChunk[node]
+
+	if not chunkKey then
+		return
+	end
+
 	local chunkData = self.Chunks[chunkKey]
 
-	if chunkData then
-		local index = table.find(chunkData, node)
-		if index then
-			table.remove(chunkData, index)
-		end
-		if #chunkData == 0 then
-			self.Chunks[chunkKey] = nil
-		end
+	if not chunkData then
+		return
+	end
+
+	local index = self.NodeIndex[node]
+	local lastIndex = #chunkData
+	local lastNode = chunkData[lastIndex]
+
+	chunkData[index] = lastNode
+	chunkData[lastIndex] = nil
+
+	if lastNode ~= node then
+		self.NodeIndex[lastNode] = index
+	end
+
+	self.NodeToChunk[node] = nil
+	self.NodeIndex[node] = nil
+
+	if #chunkData == 0 then
+		self.Chunks[chunkKey] = nil
 	end
 end
 
