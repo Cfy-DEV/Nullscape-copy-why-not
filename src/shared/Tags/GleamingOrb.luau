@@ -9,6 +9,8 @@ local Octree = require(ReplicatedStorage.Packages["octo-tree"])
 local Chunk = require(ReplicatedStorage.Shared.Classes.Chunk)
 local Networking = require(ReplicatedStorage.Shared.Config.Networking)
 
+local gleamOrbModel = ReplicatedStorage:WaitForChild("Assets"):WaitForChild("GleamOrb")
+
 local clientOrbTree = Octree.new()
 local serverChunk = Chunk.new(Vector3.new(12.5, 12.5, 12.5))
 
@@ -20,6 +22,8 @@ local serverNodes = {}
 local clientOrbs = {}
 
 if RunService:IsServer() then
+	local pickupRadius = 3
+
 	while task.wait(0.05) do
 		for _, player: Player in pairs(Players:GetPlayers()) do
 			local char = player.Character
@@ -32,10 +36,15 @@ if RunService:IsServer() then
 			end
 
 			local pos = hrs.Position
-			local neighboorChunks = serverChunk:GetChunksInRadius(pos, 25)
+			local neighboorChunks = serverChunk:GetPartsInRadius(pos, 25)
 
-			for _, part in pairs(neighboorChunks) do
-				if pos - part
+			for _, part: BasePart in pairs(neighboorChunks) do
+				if (pos - part.Position).Magnitude <= pickupRadius then
+					serverChunk:RemoveNode(part)
+					serverNodes[part] = nil
+					part:Destroy()
+					Networking.OrbCollected:Fire(player)
+				end
 			end
 		end
 	end
@@ -104,11 +113,15 @@ local module = {
 			return
 		end
 
-		serverChunk:AddNode(part)
+		local key = serverChunk:AddNode(part)
+
+		serverNodes[part] = key
 	end,
 
 	Client = function(part: BasePart)
-		local gleamOrbModel = ReplicatedStorage:WaitForChild("Assets"):WaitForChild("GleamOrb")
+		if clientOrbs[part] then
+			return
+		end
 
 		assert(gleamOrbModel, "GleamOrb model was not found")
 
