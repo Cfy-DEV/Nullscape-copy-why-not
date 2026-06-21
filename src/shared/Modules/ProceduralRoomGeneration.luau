@@ -6,20 +6,28 @@ local roomsFolder = ServerStorage.Rooms
 
 local module = {}
 
-module.Chunk = Chunk.new(Vector3.new(25, 25, 25))
+module.Chunk = Chunk.new(Vector3.new(25, 25, 25), true)
 module.Cache = NetModule.New("Cache", "Folder", workspace, nil)
-
-module.RoomNodes = {}
 
 if workspace:FindFirstChild("WorldCenter") then
 	module.Chunk:SetWorldCenter(workspace.WorldCenter.Position)
 end
 
+for _, cloneInstance in pairs(module.Cache.StartingRoom:GetChildren()) do
+	if cloneInstance.Name == "Chunk" then
+		module.Chunk:AddNode(cloneInstance)
+	end
+end
+
+module.RoomNodes = {}
+
 local MAX_RETRIES = 3
 
 module.CleanupRoomChunks = function(room: Model)
 	local nodes = module.RoomNodes[room]
-	if not nodes then return end
+	if not nodes then
+		return
+	end
 
 	for _, node in ipairs(nodes) do
 		module.Chunk:RemoveNode(node)

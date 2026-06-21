@@ -101,6 +101,9 @@ function Timer:Reset(time)
 	self.CurrentThreshold = 0
 end
 
+--[[
+Unbind 
+]]
 function Timer:UnbindFromValue()
 	self.CurrentValue = nil
 end

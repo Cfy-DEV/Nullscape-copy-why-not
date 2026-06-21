@@ -21,90 +21,92 @@ end
 local serverNodes = {}
 local clientOrbs = {}
 
-if RunService:IsServer() then
-	local pickupRadius = 3
+task.spawn(function()
+	if RunService:IsServer() then
+		local pickupRadius = 3
 
-	while task.wait(0.05) do
-		for _, player: Player in pairs(Players:GetPlayers()) do
-			local char = player.Character
-			if not char then
-				continue
-			end
-			local hrs: BasePart = char:FindFirstChild("HumanoidRootPart")
-			if not hrs then
-				continue
-			end
+		while task.wait(0.05) do
+			for _, player: Player in pairs(Players:GetPlayers()) do
+				local char = player.Character
+				if not char then
+					continue
+				end
+				local hrs: BasePart = char:FindFirstChild("HumanoidRootPart")
+				if not hrs then
+					continue
+				end
 
-			local pos = hrs.Position
-			local neighboorChunks = serverChunk:GetPartsInRadius(pos, 25)
+				local pos = hrs.Position
+				local neighboorChunks = serverChunk:GetPartsInRadius(pos, 25)
 
-			for _, part: BasePart in pairs(neighboorChunks) do
-				if (pos - part.Position).Magnitude <= pickupRadius then
-					serverChunk:RemoveNode(part)
-					serverNodes[part] = nil
-					part:Destroy()
-					Networking.OrbCollected:Fire(player)
+				for _, part: BasePart in pairs(neighboorChunks) do
+					if (pos - part.Position).Magnitude <= pickupRadius then
+						serverChunk:RemoveNode(part)
+						serverNodes[part] = nil
+						part:Destroy()
+						Networking.OrbCollected:Fire(player)
+					end
 				end
 			end
 		end
 	end
-end
 
-if RunService:IsClient() then
-	local localPlayerModule = require(ReplicatedStorage.Shared.Modules.LocalPlayer)
+	if RunService:IsClient() then
+		local localPlayerModule = require(ReplicatedStorage.Shared.Modules.LocalPlayer)
 
-	local renderDistance = localPlayerModule:GetEstimatedRenderDistance()
+		local renderDistance = localPlayerModule:GetEstimatedRenderDistance()
 
-	local userSettings = UserSettings()
-	local gameSettings = userSettings.GameSettings
+		local userSettings = UserSettings()
+		local gameSettings = userSettings.GameSettings
 
-	gameSettings:GetPropertyChangedSignal("SavedQualityLevel"):Connect(function()
-		renderDistance = localPlayerModule:GetEstimatedRenderDistance()
-	end)
+		gameSettings:GetPropertyChangedSignal("SavedQualityLevel"):Connect(function()
+			renderDistance = localPlayerModule:GetEstimatedRenderDistance()
+		end)
 
-	while task.wait(1) do
-		local lp = Players.LocalPlayer
-		local char = lp.Character
+		while task.wait(2) do
+			local lp = Players.LocalPlayer
+			local char = lp.Character
 
-		if not char then
-			continue
-		end
-
-		local root = char:FindFirstChild("HumanoidRootPart")
-
-		if not root then
-			continue
-		end
-
-		local nearby = clientOrbTree:SearchRadius(root.Position, renderDistance)
-
-		local visible = {}
-
-		for _, node in ipairs(nearby) do
-			local part = node.Object
-
-			visible[part] = true
-
-			local orbData = clientOrbs[part]
-
-			if orbData and not orbData.Visible then
-				orbData.Visible = true
-				orbData.Model.Parent = workspace
-			end
-		end
-
-		for part, orbData in pairs(clientOrbs) do
-			if visible[part] then
+			if not char then
 				continue
 			end
 
-			if orbData.Visible then
-				orbData.Visible = false
-				orbData.Model.Parent = nil
+			local root = char:FindFirstChild("HumanoidRootPart")
+
+			if not root then
+				continue
+			end
+
+			local nearby = clientOrbTree:SearchRadius(root.Position, renderDistance)
+
+			local visible = {}
+
+			for _, node in ipairs(nearby) do
+				local part = node.Object
+
+				visible[part] = true
+
+				local orbData = clientOrbs[part]
+
+				if orbData and not orbData.Visible then
+					orbData.Visible = true
+					orbData.Model.Parent = workspace
+				end
+			end
+
+			for part, orbData in pairs(clientOrbs) do
+				if visible[part] then
+					continue
+				end
+
+				if orbData.Visible then
+					orbData.Visible = false
+					orbData.Model.Parent = nil
+				end
 			end
 		end
 	end
-end
+end)
 
 local module = {
 
@@ -127,12 +129,15 @@ local module = {
 
 		local clone = gleamOrbModel:Clone()
 
-		clone.Parent = nil
+		clone.Parent = Networking.ScriptJunk
 		clone.Position = part.Position
 		clientOrbs[part] = {
 			Model = clone,
 			Visible = false,
 		}
+
+		CollectionService:AddTag(clone, "Rainbow")
+		CollectionService:AddTag(clone, "BlockySpin")
 
 		local node = clientOrbTree:CreateNode(part.Position, part)
 		local destroyed = false

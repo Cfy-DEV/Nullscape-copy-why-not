@@ -6,10 +6,12 @@ local module = {}
 local chunk = {}
 chunk.__index = chunk
 
-function module.new(Size: Vector3): Types.Chunk
-    assert(Size.X ~= 0 and Size.Y ~= 0 and Size.Z ~= 0, "Chunk size cannot be 0")
-    
+function module.new(Size: Vector3, debug): Types.Chunk
+	assert(Size.X ~= 0 and Size.Y ~= 0 and Size.Z ~= 0, "Chunk size cannot be 0")
+
 	local self = setmetatable({}, chunk)
+
+	self.debug = debug or false
 
 	self.WorldCenter = Vector3.zero
 	self.Size = Size
@@ -138,18 +140,20 @@ function chunk:AddNode(node: BasePart)
 
 	if not self.Chunks[chunkKey] then
 		self.Chunks[chunkKey] = {}
-		local part = Instance.new("Part")
-		part.Shape = Enum.PartType.Block
-		part.Material = Enum.Material.Neon
-		part.Color = Color3.fromRGB(0, 255, 0)
-		part.Transparency = 0.75
-		part.CanCollide = false
-		part.Anchored = true
-		part.CanTouch = false
-		part.CanQuery = false
-		part.Parent = Networking.ScriptJunk
-		part.Position = chunkPos
-		part.Size = self.Size
+		if self.debug then
+			local part = Instance.new("Part")
+			part.Shape = Enum.PartType.Block
+			part.Material = Enum.Material.Neon
+			part.Color = Color3.fromRGB(0, 255, 0)
+			part.Transparency = 0.85
+			part.CanCollide = false
+			part.Anchored = true
+			part.CanTouch = false
+			part.CanQuery = false
+			part.Parent = Networking.ScriptJunk
+			part.Position = chunkPos
+			part.Size = self.Size
+		end
 	end
 
 	local chunkData = self.Chunks[chunkKey]
