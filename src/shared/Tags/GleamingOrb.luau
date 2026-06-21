@@ -10,9 +10,12 @@ local Chunk = require(ReplicatedStorage.Shared.Classes.Chunk)
 local Networking = require(ReplicatedStorage.Shared.Config.Networking)
 
 local clientOrbTree = Octree.new()
-local serverChunk = Chunk.new(Vector3.new(125, 125, 125))
+local serverChunk = Chunk.new(Vector3.new(12.5, 12.5, 12.5))
 
-local serverOrbTrees = {}
+if workspace:FindFirstChild("WorldCenter") then
+	serverChunk:SetWorldCenter(workspace.WorldCenter.Position)
+end
+
 local serverNodes = {}
 local clientOrbs = {}
 
@@ -27,24 +30,12 @@ if RunService:IsServer() then
 			if not hrs then
 				continue
 			end
+
 			local pos = hrs.Position
+			local neighboorChunks = serverChunk:GetChunksInRadius(pos, 25)
 
-			local chunkKey = serverChunk:GetChunkAtPosition(pos)
-			local octree = serverOrbTrees[chunkKey]
-
-			if octree then
-				local nearby = octree:SearchRadius(pos, 3)
-
-				for _, orb in pairs(nearby) do
-					local part = orb.Object
-					local currentOctree = serverOrbTrees[chunkKey]
-					if currentOctree then
-						currentOctree:RemoveNode(orb)
-						part:Destroy()
-						Networking.OrbCollected:Fire(player)
-					end
-					serverNodes[part] = nil
-				end
+			for _, part in pairs(neighboorChunks) do
+				if pos - part
 			end
 		end
 	end
@@ -67,13 +58,13 @@ if RunService:IsClient() then
 		local char = lp.Character
 
 		if not char then
-			return
+			continue
 		end
 
 		local root = char:FindFirstChild("HumanoidRootPart")
 
 		if not root then
-			return
+			continue
 		end
 
 		local nearby = clientOrbTree:SearchRadius(root.Position, renderDistance)
@@ -113,14 +104,7 @@ local module = {
 			return
 		end
 
-		local chunkKey = serverChunk:AddNode(part)
-
-		if not serverOrbTrees[chunkKey] then
-			serverOrbTrees[chunkKey] = Octree.new()
-		end
-
-		local node = serverOrbTrees[chunkKey]:CreateNode(part.Position, part)
-		serverNodes[part] = node
+		serverChunk:AddNode(part)
 	end,
 
 	Client = function(part: BasePart)
@@ -130,7 +114,7 @@ local module = {
 
 		local clone = gleamOrbModel:Clone()
 
-		clone.Parent = nil	
+		clone.Parent = nil
 		clone.Position = part.Position
 		clientOrbs[part] = {
 			Model = clone,

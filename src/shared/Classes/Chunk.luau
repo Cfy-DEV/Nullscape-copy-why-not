@@ -7,6 +7,8 @@ local chunk = {}
 chunk.__index = chunk
 
 function module.new(Size: Vector3): Types.Chunk
+    assert(Size.X ~= 0 and Size.Y ~= 0 and Size.Z ~= 0, "Chunk size cannot be 0")
+    
 	local self = setmetatable({}, chunk)
 
 	self.WorldCenter = Vector3.zero
@@ -91,9 +93,14 @@ function chunk:GetChunksInRadius(centerPos: Vector3, radius: number)
 
 	local pos = roundPos(centerPos, self.Size, self.WorldCenter)
 
-	local radiusX = math.ceil(radius / self.Size.X) * self.Size.X
-	local radiusY = math.ceil(radius / self.Size.Y) * self.Size.Y
-	local radiusZ = math.ceil(radius / self.Size.Z) * self.Size.Z
+	local radiusX = (self.Size.X == 0 or self.Size.X == math.huge) and 0
+		or math.ceil(radius / self.Size.X) * self.Size.X
+
+	local radiusY = (self.Size.Y == 0 or self.Size.Y == math.huge) and 0
+		or math.ceil(radius / self.Size.Y) * self.Size.Y
+
+	local radiusZ = (self.Size.Z == 0 or self.Size.Z == math.huge) and 0
+		or math.ceil(radius / self.Size.Z) * self.Size.Z
 
 	-- 🦅 FUCK READIBILITY 🦅
 
@@ -141,7 +148,7 @@ function chunk:AddNode(node: BasePart)
 		part.CanTouch = false
 		part.CanQuery = false
 		part.Parent = Networking.ScriptJunk
-		part.Position = pos
+		part.Position = chunkPos
 		part.Size = self.Size
 	end
 
@@ -219,6 +226,8 @@ Removes all chunks from the data structure
 ]]
 function chunk:Cleanup()
 	table.clear(self.Chunks)
+	table.clear(self.NodeToChunk)
+	table.clear(self.NodeIndex)
 end
 
 --[[
