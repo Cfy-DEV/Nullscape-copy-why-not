@@ -6,7 +6,7 @@ local roomsFolder = ServerStorage.Rooms
 
 local module = {}
 
-module.Chunk = Chunk.new(Vector3.new(25, 25, 25), true)
+module.Chunk = Chunk.new(Vector3.new(25, 25, 25), false)
 module.Cache = NetModule.New("Cache", "Folder", workspace, nil)
 
 if workspace:FindFirstChild("WorldCenter") then
@@ -71,8 +71,6 @@ local function RetryRoom(room)
 end
 
 module.DestroyBranch = function(room: Model, visited)
-	task.wait()
-
 	visited = visited or {}
 
 	if visited[room] then
@@ -207,7 +205,7 @@ module.GetEnds = function(room)
 	return Ends
 end
 
-module.NewBranch = function(StartingEnd, MaxDepth)
+module.NewBranch = function(StartingEnd, MaxDepth, Delay)
 	local ends = { StartingEnd }
 	local temp = {}
 	local branch = {}
@@ -230,6 +228,8 @@ module.NewBranch = function(StartingEnd, MaxDepth)
 					table.insert(temp, nextEnd)
 				end
 			end
+
+			task.wait(Delay or 0)
 		end
 
 		table.clear(ends)

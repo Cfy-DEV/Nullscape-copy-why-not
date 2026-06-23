@@ -8,6 +8,18 @@ local module = {}
 local Timer = {}
 Timer.__index = Timer
 
+--[[
+	Timer.new(time: number): Types.Timer
+	
+	Creates a new Timer instance with the specified duration.
+	If time is 0, it is set to math.huge (infinite timer).
+	
+	Parameters:
+		time: number - The duration of the timer in seconds
+	
+	Returns:
+		Types.Timer - A new Timer instance
+]]
 function module.new(time): Types.Timer
 	local self = setmetatable({}, Timer)
 
@@ -31,6 +43,14 @@ function module.new(time): Types.Timer
 	return self
 end
 
+--[[
+	Timer:Resume()
+	
+	Starts or resumes the timer countdown. If already running, this does nothing.
+	Connects to either RenderStepped (client) or Heartbeat (server) for delta time updates.
+	Fires the Loop signal at regular Threshold intervals.
+	Fires the Done signal when time reaches zero.
+]]
 function Timer:Resume()
 	if self.Started then
 		return
@@ -78,22 +98,54 @@ function Timer:Resume()
 	end
 end
 
+--[[
+	Timer:Pause()
+	
+	Pauses the timer without resetting its state.
+	The timer can be resumed later with Resume().
+]]
 function Timer:Pause()
 	self.RuntimeTrove:Clean()
 	self.Started = false
 end
 
+--[[
+	Timer:Destroy()
+	
+	Completely destroys the timer, cleaning up all connections and signals.
+	Should be called when the timer is no longer needed.
+]]
 function Timer:Destroy()
 	self:Pause()
 	self.Trove:Destroy()
 end
 
+--[[
+	Timer:BindToValue(value: NumberValue)
+	
+	Binds the timer to a NumberValue instance, automatically updating its value each frame.
+	
+	Parameters:
+		value: NumberValue - The NumberValue to bind to (must be a valid NumberValue)
+	
+	Throws:
+		Assertion error if the provided value is not a NumberValue
+]]
 function Timer:BindToValue(value: NumberValue)
-	assert(value:IsA("NumberValue"), "Must be a numberValue")
+	assert(value:IsA("NumberValue"), "Must be a NumberValue")
 
 	self.CurrentValue = value
 end
 
+--[[
+	Timer:Reset(time: number)
+	
+	Resets the timer to a new duration and clears the threshold accumulator.
+	Pauses the timer, so Resume() must be called to start it again.
+	
+	Parameters:
+		time: number - The new duration in seconds
+]]
 function Timer:Reset(time)
 	self:Pause()
 
@@ -102,7 +154,10 @@ function Timer:Reset(time)
 end
 
 --[[
-Unbind 
+	Timer:UnbindFromValue()
+	
+	Unbinds the timer from any previously bound NumberValue.
+	The timer will no longer update any external value.
 ]]
 function Timer:UnbindFromValue()
 	self.CurrentValue = nil

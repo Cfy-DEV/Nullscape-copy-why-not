@@ -6,5 +6,5 @@ local enemies = {}
 ProceduralRoomGeneration.Chunk.CenterOfMass = ProceduralRoomGeneration.Cache.StartingRoom.End.Position
 
 return function()
-	ProceduralRoomGeneration.NewBranch(ProceduralRoomGeneration.Cache.StartingRoom.End, 5)
+	ProceduralRoomGeneration.NewBranch(ProceduralRoomGeneration.Cache.StartingRoom.End, 15, 0.025)
 end

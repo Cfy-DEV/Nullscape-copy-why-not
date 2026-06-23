@@ -6,6 +6,9 @@ local module = {}
 local chunk = {}
 chunk.__index = chunk
 
+--[[
+Creates a new object within the Chunk class
+]]
 function module.new(Size: Vector3, debug): Types.Chunk
 	assert(Size.X ~= 0 and Size.Y ~= 0 and Size.Z ~= 0, "Chunk size cannot be 0")
 
