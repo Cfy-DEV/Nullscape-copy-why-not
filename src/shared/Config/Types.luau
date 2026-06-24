@@ -49,4 +49,40 @@ export type Chunk = {
 	Destroy: (self: Chunk) -> (),
 }
 
+export type WeightedRNG = {
+	RemoveItemOnRoll: boolean,
+	TotalWeight: number,
+	Items: { [string]: number },
+
+	AddItem: (self: WeightedRNG, item: string, weight: number) -> (),
+	RemoveItem: (self: WeightedRNG, item: string) -> boolean,
+	Clean: (self: WeightedRNG) -> (),
+	Roll: (self: WeightedRNG) -> string?,
+}
+
+export type PercentageItem = {
+	Name: string,
+	Chance: number,
+}
+
+export type PercentageRNG = {
+	RemoveItemOnRoll: boolean,
+	Range: number,
+	ReturnNilWhenNone: boolean,
+	Items: {
+		Info: { PercentageItem },
+		Names: { [string]: number },
+	},
+
+	AddItem: (self: PercentageRNG, item: string, percentage: number) -> (),
+	RemoveItem: (self: PercentageRNG, item: string) -> boolean,
+	Clean: (self: PercentageRNG) -> (),
+	Roll: (self: PercentageRNG) -> string?,
+}
+
+export type RNGModule = {
+	NewWeightedRNG: () -> WeightedRNG,
+	NewPercentualRNG: () -> PercentageRNG,
+}
+
 return module
